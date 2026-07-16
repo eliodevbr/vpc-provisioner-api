@@ -1,19 +1,18 @@
-# ==========================================
-# Stage 1: Base Installation
-# ==========================================
+# syntax=docker/dockerfile:1
+# check=experimental=all
+
+# base Stage 1: Base Installation
 FROM python:3.12-slim AS base
 
 USER root
 
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update \
-    && apt-get install -y --no-install-recommends tini \
-    && rm -rf /var/lib/apt/lists/*
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked\
+ --mount=type=cache,target=/var/lib/apt,sharing=locked\
+ apt-get update\
+ && apt-get install -y --no-install-recommends tini\
+ && rm -rf /var/lib/apt/lists/*
 
-# ==========================================
-# Stage 2: Build & Dependency Installation
-# ==========================================
+# builder Stage 2: Build & Dependency Installation
 FROM base AS builder
 
 # Install uv
@@ -25,27 +24,24 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy
 
 # Copy dependency files first to leverage Docker caching
-RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --frozen --no-install-project --no-dev
+RUN --mount=type=cache,target=/root/.cache/uv\
+ --mount=type=bind,source=uv.lock,target=uv.lock\
+ --mount=type=bind,source=pyproject.toml,target=pyproject.toml\
+ ls -lha && uv sync --frozen --no-install-project --no-dev
 
 # Copy the rest of the application source code
 COPY . .
 
 # Sync the project itself
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev
+RUN --mount=type=cache,target=/root/.cache/uv\
+ ls -lha && uv sync --frozen --no-dev
 
-
-# ==========================================
-# Stage 3: Minimal Runtime Image (Jailed / Hardened)
-# ==========================================
+# runtime Stage 3: Minimal Runtime Image (Jailed / Hardened)
 FROM base AS runtime
 
 # 1. Create a non-root system user and group with explicit IDs
-RUN groupadd -g 10001 appgroup && \
-    useradd -u 10001 -g appgroup -m -s /sbin/nologin appuser
+RUN groupadd -g 10001 appgroup &&\
+ useradd -u 10001 -g appgroup -m -s /sbin/nologin appuser
 
 WORKDIR /app
 
@@ -65,6 +61,7 @@ USER 10001
 
 # Expose your application port (Note: AWS Lambda ignores EXPOSE, but good for local dev)
 EXPOSE 3000
+EXPOSE 8000
 
 ENTRYPOINT ["/usr/bin/tini", "--"]
 

@@ -188,3 +188,19 @@ shell = "bash -c"
 run = '''
 docker buildx build --pull -f 'Dockerfile' -t vpc-provisioner-api:latest --progress=plain .
 '''
+
+[tasks."compose:up"]
+alias = ["up", "cup", "dcu", "dcup"]
+description = "Run the SAM local API with the Colima Docker socket"
+shell = "bash -c"
+run = '''
+docker compose up -d --build
+'''
+
+[tasks."compose:down"]
+alias = ["down", "cdown", "dcd", "dcdown"]
+description = "Run the SAM local API with the Colima Docker socket"
+shell = "bash -c"
+run = '''
+docker compose down
+'''
